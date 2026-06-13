@@ -1,0 +1,6 @@
+{
+  "name": "MY Personalized AI Tutor",
+  "description": "An interactive tutor that helps you learn AI concepts using Duolingo-style micro-lessons, adaptive quizzes, Socratic dialogues, and detailed evaluations, with Supabase auth and PostHog metrics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
