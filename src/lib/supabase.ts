@@ -67,21 +67,32 @@ class SandboxAuth {
 
 // Unified Authenticator Layer
 export const authService = {
-  async signUp(email: string): Promise<{ user: any; error: string | null; isSandbox: boolean }> {
+  /**
+   * Send a one-time password (OTP) code to the user's email.
+   * For sandbox mode, this instantly "signs in" the user (no code needed).
+   */
+  async signIn(email: string): Promise<{ user: any; error: string | null; isSandbox: boolean; otpSent?: boolean }> {
     if (supabase) {
       try {
-        const { data, error } = await supabase.auth.signUp({
+        // Use Supabase OTP (magic code) — sends a 6-digit code to the email
+        const { error } = await supabase.auth.signInWithOtp({
           email,
-          password: "DefaultAIPassword123!", // Simplified for direct email auth flow
+          options: {
+            shouldCreateUser: true, // Auto-create account if new user
+          },
         });
-        if (error) return { user: null, error: error.message, isSandbox: false };
-        return { user: data.user, error: null, isSandbox: false };
+        if (error) {
+          return { user: null, error: error.message, isSandbox: false };
+        }
+        // OTP sent successfully — no user object yet until they verify the code
+        return { user: null, error: null, isSandbox: false, otpSent: true };
       } catch (err: any) {
-        return { user: null, error: err.message || "Supabase signup error", isSandbox: false };
+        return { user: null, error: err.message || "Failed to send verification code", isSandbox: false };
       }
     } else {
+      // Sandbox: instant login, no OTP needed
       try {
-        const { data } = SandboxAuth.signUp(email);
+        const { data } = SandboxAuth.signIn(email);
         return { user: data.user, error: null, isSandbox: true };
       } catch (err: any) {
         return { user: null, error: err.message, isSandbox: true };
@@ -89,36 +100,28 @@ export const authService = {
     }
   },
 
-  async signIn(email: string): Promise<{ user: any; error: string | null; isSandbox: boolean }> {
+  /**
+   * Verify the OTP code the user received via email.
+   * Only used when Supabase is configured (not sandbox mode).
+   */
+  async verifyOtp(email: string, token: string): Promise<{ user: any; error: string | null; isSandbox: boolean }> {
     if (supabase) {
       try {
-        // Authenticate with Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.verifyOtp({
           email,
-          password: "DefaultAIPassword123!",
+          token,
+          type: "email",
         });
         if (error) {
-          // If login fails, let's try signing them up automatically to make the flow simple & smooth
-          const signupAttempt = await supabase.auth.signUp({
-            email,
-            password: "DefaultAIPassword123!",
-          });
-          if (signupAttempt.error) {
-            return { user: null, error: signupAttempt.error.message, isSandbox: false };
-          }
-          return { user: signupAttempt.data.user, error: null, isSandbox: false };
+          return { user: null, error: error.message, isSandbox: false };
         }
         return { user: data.user, error: null, isSandbox: false };
       } catch (err: any) {
-        return { user: null, error: err.message || "Supabase signin error", isSandbox: false };
+        return { user: null, error: err.message || "Verification failed", isSandbox: false };
       }
     } else {
-      try {
-        const { data } = SandboxAuth.signIn(email);
-        return { user: data.user, error: null, isSandbox: true };
-      } catch (err: any) {
-        return { user: null, error: err.message, isSandbox: true };
-      }
+      // Sandbox: should never reach here, but handle gracefully
+      return { user: null, error: "OTP not supported in sandbox mode", isSandbox: true };
     }
   },
 
