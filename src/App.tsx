@@ -40,8 +40,8 @@ export default function App() {
         const user = await authService.getCurrentUser();
         if (user) {
           setCurrentUser(user);
-          // If supabase client exists, isSandbox matches the config status
-          setIsSandbox(!isSupabaseConfigured);
+          // If supabase client exists, isSandbox matches the config status or sandbox user prefix
+          setIsSandbox(!isSupabaseConfigured || (user.id && user.id.startsWith("sb_")));
           
           // Identify user in telemetry funnel
           posthogTracker.identifyUser(user.id, user.email);
@@ -69,7 +69,7 @@ export default function App() {
       if (event === "SIGNED_IN" && session?.user && !currentUser) {
         const user = session.user;
         setCurrentUser(user);
-        setIsSandbox(!isSupabaseConfigured);
+        setIsSandbox(!isSupabaseConfigured || (user.id && user.id.startsWith("sb_")));
 
         // Identify user in telemetry
         posthogTracker.identifyUser(user.id, user.email);

@@ -23,6 +23,27 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
+  const handleSandboxBypass = async () => {
+    const targetEmail = email.trim() || "developer@example.com";
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const { authService } = await import("../lib/supabase");
+      const result = await authService.signIn(targetEmail, true);
+
+      if (result.error) {
+        setErrorMsg(result.error);
+      } else if (result.user) {
+        onLoginSuccess(targetEmail, true);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "An authentication error occurred.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !email.includes("@")) {
@@ -127,8 +148,15 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
           {!magicLinkStep && (
             <form className="space-y-6" onSubmit={handleEmailSubmit}>
               {errorMsg && (
-                <div className="bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 p-3.5 rounded-xl text-xs border border-rose-100 dark:border-rose-900/10 font-medium">
-                  {errorMsg}
+                <div className="bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 p-3.5 rounded-xl text-xs border border-rose-100 dark:border-rose-900/10 font-medium space-y-2">
+                  <p>{errorMsg}</p>
+                  <button
+                    type="button"
+                    onClick={handleSandboxBypass}
+                    className="mt-2 w-full text-center py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    Bypass & Continue in Sandbox Mode
+                  </button>
                 </div>
               )}
 
@@ -158,20 +186,32 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                 </p>
               </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-md text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all duration-200 transform active:scale-[0.98] cursor-pointer"
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Sending Link...
-                  </span>
-                ) : (
-                  "Get Started & Learn"
-                )}
-              </button>
+              <div className="space-y-3">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-md text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all duration-200 transform active:scale-[0.98] cursor-pointer"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Sending Link...
+                    </span>
+                  ) : (
+                    "Get Started & Learn"
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSandboxBypass}
+                  disabled={isLoading}
+                  className="w-full flex justify-center items-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800/50 dark:hover:bg-slate-800/80 focus:outline-none transition-all cursor-pointer"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                  <span>Bypass via Sandbox Mode</span>
+                </button>
+              </div>
             </form>
           )}
 
@@ -189,8 +229,15 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
               </button>
 
               {errorMsg && (
-                <div className="bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 p-3.5 rounded-xl text-xs border border-rose-100 dark:border-rose-900/10 font-medium">
-                  {errorMsg}
+                <div className="bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 p-3.5 rounded-xl text-xs border border-rose-100 dark:border-rose-900/10 font-medium space-y-2">
+                  <p>{errorMsg}</p>
+                  <button
+                    type="button"
+                    onClick={handleSandboxBypass}
+                    className="mt-2 w-full text-center py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    Bypass & Continue in Sandbox Mode
+                  </button>
                 </div>
               )}
 

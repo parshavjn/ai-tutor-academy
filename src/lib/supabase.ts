@@ -34,7 +34,13 @@ class SandboxAuth {
   static signUp(email: string) {
     const users = this.getUsers();
     if (users[email]) {
-      throw new Error("User already exists inside local Sandbox.");
+      const mockUser = {
+        id: users[email].id,
+        email,
+        created_at: users[email].created_at,
+      };
+      this.setActiveUser(mockUser);
+      return { data: { user: mockUser }, error: null };
     }
     const mockUser = {
       id: "sb_" + Math.random().toString(36).substring(2, 11),
@@ -71,8 +77,8 @@ export const authService = {
    * Send a magic link to the user's email for passwordless sign-in.
    * For sandbox mode, this instantly "signs in" the user (no email needed).
    */
-  async signIn(email: string): Promise<{ user: any; error: string | null; isSandbox: boolean; magicLinkSent?: boolean }> {
-    if (supabase) {
+  async signIn(email: string, forceSandbox = false): Promise<{ user: any; error: string | null; isSandbox: boolean; magicLinkSent?: boolean }> {
+    if (supabase && !forceSandbox) {
       try {
         // Send a magic link to the user's email.
         // When they click the link, Supabase will redirect them back to the app
@@ -119,18 +125,20 @@ export const authService = {
   async signOut(): Promise<void> {
     if (supabase) {
       await supabase.auth.signOut();
-    } else {
-      SandboxAuth.signOut();
     }
+    SandboxAuth.signOut();
   },
 
   async getCurrentUser(): Promise<any> {
+    const sandboxUser = SandboxAuth.getActiveUser();
+    if (sandboxUser) {
+      return sandboxUser;
+    }
     if (supabase) {
       const { data } = await supabase.auth.getUser();
       return data?.user || null;
-    } else {
-      return SandboxAuth.getActiveUser();
     }
+    return null;
   }
 };
 
@@ -144,7 +152,7 @@ export const progressService = {
       completedLessons: [],
     };
 
-    if (supabase) {
+    if (supabase && !userId.startsWith("sb_")) {
       try {
         const { data, error } = await supabase
           .from("ai_tutor_progress")
@@ -186,7 +194,7 @@ export const progressService = {
   },
 
   async saveProgress(userId: string, progress: UserProgressData): Promise<void> {
-    if (supabase) {
+    if (supabase && !userId.startsWith("sb_")) {
       try {
         await supabase.from("ai_tutor_progress").upsert({
           user_id: userId,
@@ -209,7 +217,7 @@ export const progressService = {
   },
 
   async saveSessionLog(userId: string, conceptName: string, quizScore: number, rating: string, feedback: string) {
-    if (supabase) {
+    if (supabase && !userId.startsWith("sb_")) {
       try {
         await supabase.from("ai_tutor_logs").insert({
           user_id: userId,
@@ -237,7 +245,7 @@ export const progressService = {
   },
 
   async getSessionLogs(userId: string): Promise<any[]> {
-    if (supabase) {
+    if (supabase && !userId.startsWith("sb_")) {
       try {
         const { data } = await supabase
           .from("ai_tutor_logs")
