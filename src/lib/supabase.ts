@@ -68,29 +68,33 @@ class SandboxAuth {
 // Unified Authenticator Layer
 export const authService = {
   /**
-   * Send a one-time password (OTP) code to the user's email.
-   * For sandbox mode, this instantly "signs in" the user (no code needed).
+   * Send a magic link to the user's email for passwordless sign-in.
+   * For sandbox mode, this instantly "signs in" the user (no email needed).
    */
-  async signIn(email: string): Promise<{ user: any; error: string | null; isSandbox: boolean; otpSent?: boolean }> {
+  async signIn(email: string): Promise<{ user: any; error: string | null; isSandbox: boolean; magicLinkSent?: boolean }> {
     if (supabase) {
       try {
-        // Use Supabase OTP (magic code) — sends a 6-digit code to the email
+        // Send a magic link to the user's email.
+        // When they click the link, Supabase will redirect them back to the app
+        // and the onAuthStateChange listener will detect the session.
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
             shouldCreateUser: true, // Auto-create account if new user
+            // Redirect back to the current app origin after clicking the magic link
+            emailRedirectTo: window.location.origin,
           },
         });
         if (error) {
           return { user: null, error: error.message, isSandbox: false };
         }
-        // OTP sent successfully — no user object yet until they verify the code
-        return { user: null, error: null, isSandbox: false, otpSent: true };
+        // Magic link sent — user needs to check their email and click the link
+        return { user: null, error: null, isSandbox: false, magicLinkSent: true };
       } catch (err: any) {
-        return { user: null, error: err.message || "Failed to send verification code", isSandbox: false };
+        return { user: null, error: err.message || "Failed to send sign-in link", isSandbox: false };
       }
     } else {
-      // Sandbox: instant login, no OTP needed
+      // Sandbox: instant login, no email needed
       try {
         const { data } = SandboxAuth.signIn(email);
         return { user: data.user, error: null, isSandbox: true };
@@ -101,28 +105,15 @@ export const authService = {
   },
 
   /**
-   * Verify the OTP code the user received via email.
-   * Only used when Supabase is configured (not sandbox mode).
+   * Listen for auth state changes (e.g., when user returns from magic link).
+   * Returns an unsubscribe function.
    */
-  async verifyOtp(email: string, token: string): Promise<{ user: any; error: string | null; isSandbox: boolean }> {
+  onAuthStateChange(callback: (event: string, session: any) => void): (() => void) | null {
     if (supabase) {
-      try {
-        const { data, error } = await supabase.auth.verifyOtp({
-          email,
-          token,
-          type: "email",
-        });
-        if (error) {
-          return { user: null, error: error.message, isSandbox: false };
-        }
-        return { user: data.user, error: null, isSandbox: false };
-      } catch (err: any) {
-        return { user: null, error: err.message || "Verification failed", isSandbox: false };
-      }
-    } else {
-      // Sandbox: should never reach here, but handle gracefully
-      return { user: null, error: "OTP not supported in sandbox mode", isSandbox: true };
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(callback);
+      return () => subscription.unsubscribe();
     }
+    return null;
   },
 
   async signOut(): Promise<void> {

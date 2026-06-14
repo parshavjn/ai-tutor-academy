@@ -63,6 +63,34 @@ export default function App() {
     loadSession();
   }, []);
 
+  // Listen for auth state changes (magic link redirect callback)
+  useEffect(() => {
+    const unsubscribe = authService.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user && !currentUser) {
+        const user = session.user;
+        setCurrentUser(user);
+        setIsSandbox(!isSupabaseConfigured);
+
+        // Identify user in telemetry
+        posthogTracker.identifyUser(user.id, user.email);
+
+        // Load progress stats
+        const userProgress = await progressService.getProgress(user.id);
+        setProgress(userProgress);
+
+        // Fetch logs
+        const logs = await progressService.getSessionLogs(user.id);
+        setSessionLogs(logs);
+
+        showToast("Welcome back, Socratic Scholar! 🦉 Let's master AI.");
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [currentUser]);
+
   const handleLoginSuccess = async (email: string, sandboxActive: boolean) => {
     setIsLoading(true);
     try {

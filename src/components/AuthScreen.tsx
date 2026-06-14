@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Mail, Sparkles, BookOpen, KeyRound, Eye, Database, HelpCircle, ArrowLeft, ShieldCheck } from "lucide-react";
+import React, { useState } from "react";
+import { Mail, Sparkles, BookOpen, KeyRound, Eye, Database, HelpCircle, ArrowLeft, ShieldCheck, ExternalLink, MailCheck } from "lucide-react";
 import { isSupabaseConfigured } from "../lib/supabase";
 
 interface AuthScreenProps {
@@ -10,17 +10,14 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showConfigHint, setShowConfigHint] = useState(false);
 
-  // OTP verification state
-  const [otpStep, setOtpStep] = useState(false); // true = show OTP input
-  const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
-  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // Magic link sent state
+  const [magicLinkStep, setMagicLinkStep] = useState(false);
 
   // Resend cooldown
   const [resendCooldown, setResendCooldown] = useState(0);
-  useEffect(() => {
+  React.useEffect(() => {
     if (resendCooldown <= 0) return;
     const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
@@ -35,7 +32,6 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
 
     setIsLoading(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const { authService } = await import("../lib/supabase");
@@ -43,13 +39,12 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
 
       if (result.error) {
         setErrorMsg(result.error);
-      } else if (result.otpSent) {
-        // Supabase sent OTP — switch to code entry step
-        setOtpStep(true);
+      } else if (result.magicLinkSent) {
+        // Supabase sent magic link — show confirmation screen
+        setMagicLinkStep(true);
         setResendCooldown(60);
-        setSuccessMsg(`We sent a 6-digit code to ${email.trim()}`);
       } else if (result.user) {
-        // Sandbox mode — instant login, no OTP needed
+        // Sandbox mode — instant login, no email needed
         onLoginSuccess(email.trim(), result.isSandbox);
       }
     } catch (err: any) {
@@ -59,78 +54,11 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
     }
   };
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return; // Only allow digits
-
-    const newOtp = [...otpCode];
-    newOtp[index] = value.slice(-1); // Take only last char
-    setOtpCode(newOtp);
-
-    // Auto-advance to next input
-    if (value && index < 5) {
-      otpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !otpCode[index] && index > 0) {
-      otpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted.length === 0) return;
-
-    const newOtp = [...otpCode];
-    for (let i = 0; i < 6; i++) {
-      newOtp[i] = pasted[i] || "";
-    }
-    setOtpCode(newOtp);
-
-    // Focus the last filled input or the next empty one
-    const nextEmpty = newOtp.findIndex((d) => !d);
-    const focusIdx = nextEmpty === -1 ? 5 : nextEmpty;
-    otpInputRefs.current[focusIdx]?.focus();
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = otpCode.join("");
-    if (code.length !== 6) {
-      setErrorMsg("Please enter all 6 digits of the verification code.");
-      return;
-    }
-
-    setIsLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    try {
-      const { authService } = await import("../lib/supabase");
-      const result = await authService.verifyOtp(email.trim(), code);
-
-      if (result.error) {
-        setErrorMsg(result.error);
-        setOtpCode(["", "", "", "", "", ""]);
-        otpInputRefs.current[0]?.focus();
-      } else if (result.user) {
-        onLoginSuccess(email.trim(), result.isSandbox);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Verification failed.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
+  const handleResendLink = async () => {
     if (resendCooldown > 0) return;
 
     setIsLoading(true);
     setErrorMsg(null);
-    setSuccessMsg(null);
 
     try {
       const { authService } = await import("../lib/supabase");
@@ -140,22 +68,17 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
         setErrorMsg(result.error);
       } else {
         setResendCooldown(60);
-        setSuccessMsg("New code sent! Check your inbox.");
-        setOtpCode(["", "", "", "", "", ""]);
-        otpInputRefs.current[0]?.focus();
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to resend code.");
+      setErrorMsg(err.message || "Failed to resend link.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleBackToEmail = () => {
-    setOtpStep(false);
-    setOtpCode(["", "", "", "", "", ""]);
+    setMagicLinkStep(false);
     setErrorMsg(null);
-    setSuccessMsg(null);
   };
 
   return (
@@ -201,7 +124,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
         <div className="bg-white dark:bg-slate-900 py-10 px-6 sm:px-10 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800">
 
           {/* ── Step 1: Email Entry ── */}
-          {!otpStep && (
+          {!magicLinkStep && (
             <form className="space-y-6" onSubmit={handleEmailSubmit}>
               {errorMsg && (
                 <div className="bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 p-3.5 rounded-xl text-xs border border-rose-100 dark:border-rose-900/10 font-medium">
@@ -231,7 +154,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                   />
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed">
-                  No password required! We'll send a 6-digit code to your email for secure, passwordless login.
+                  No password required! We'll send a sign-in link to your email for secure, passwordless login.
                 </p>
               </div>
 
@@ -243,7 +166,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                 {isLoading ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Sending Code...
+                    Sending Link...
                   </span>
                 ) : (
                   "Get Started & Learn"
@@ -252,9 +175,9 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
             </form>
           )}
 
-          {/* ── Step 2: OTP Verification ── */}
-          {otpStep && (
-            <form className="space-y-6" onSubmit={handleVerifyOtp}>
+          {/* ── Step 2: Magic Link Sent Confirmation ── */}
+          {magicLinkStep && (
+            <div className="space-y-6">
               {/* Back button */}
               <button
                 type="button"
@@ -265,83 +188,71 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                 Use different email
               </button>
 
-              {successMsg && (
-                <div className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 p-3.5 rounded-xl text-xs border border-emerald-100 dark:border-emerald-900/10 font-medium flex items-start gap-2">
-                  <ShieldCheck className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>{successMsg}</span>
-                </div>
-              )}
-
               {errorMsg && (
                 <div className="bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 p-3.5 rounded-xl text-xs border border-rose-100 dark:border-rose-900/10 font-medium">
                   {errorMsg}
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                  Enter Verification Code
-                </label>
-                <p className="text-[11px] text-slate-400 mb-4">
-                  Check your inbox for <span className="font-semibold text-slate-600 dark:text-slate-300">{email}</span>
-                </p>
+              {/* Success illustration */}
+              <div className="text-center space-y-4">
+                <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-950/30 flex items-center justify-center">
+                  <MailCheck className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                </div>
 
-                {/* 6-digit OTP inputs */}
-                <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
-                  {otpCode.map((digit, idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => { otpInputRefs.current[idx] = el; }}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      disabled={isLoading}
-                      onChange={(e) => handleOtpChange(idx, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      autoFocus={idx === 0}
-                      className="w-12 h-14 text-center text-xl font-bold rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                    />
-                  ))}
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Check your email
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    We sent a sign-in link to
+                  </p>
+                  <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-0.5">
+                    {email}
+                  </p>
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={isLoading || otpCode.join("").length !== 6}
-                className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-md text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all duration-200 transform active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Verifying...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4" />
-                    Verify & Login
-                  </span>
-                )}
-              </button>
+              {/* Instructions */}
+              <div className="bg-slate-50 dark:bg-slate-950 rounded-xl p-4 space-y-3 border border-slate-100 dark:border-slate-800">
+                <div className="flex items-start gap-3 text-xs text-slate-600 dark:text-slate-400">
+                  <span className="bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 text-[10px] mt-0.5">1</span>
+                  <p>Open your email inbox and find the email from <strong>Supabase Auth</strong></p>
+                </div>
+                <div className="flex items-start gap-3 text-xs text-slate-600 dark:text-slate-400">
+                  <span className="bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 text-[10px] mt-0.5">2</span>
+                  <p>Click the <strong>"Sign in"</strong> link in the email</p>
+                </div>
+                <div className="flex items-start gap-3 text-xs text-slate-600 dark:text-slate-400">
+                  <span className="bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 text-[10px] mt-0.5">3</span>
+                  <p>You'll be redirected back here and automatically signed in!</p>
+                </div>
+              </div>
 
-              {/* Resend code */}
+              {/* Waiting indicator */}
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
+                <span className="h-3 w-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                <span>Waiting for you to click the link...</span>
+              </div>
+
+              {/* Resend link */}
               <div className="text-center">
                 {resendCooldown > 0 ? (
                   <p className="text-[11px] text-slate-400">
-                    Resend code in <span className="font-bold text-indigo-500">{resendCooldown}s</span>
+                    Resend link in <span className="font-bold text-indigo-500">{resendCooldown}s</span>
                   </p>
                 ) : (
                   <button
                     type="button"
-                    onClick={handleResendCode}
+                    onClick={handleResendLink}
                     disabled={isLoading}
                     className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline cursor-pointer transition-colors"
                   >
-                    Didn't receive a code? Resend
+                    Didn't receive the email? Resend
                   </button>
                 )}
               </div>
-            </form>
+            </div>
           )}
 
           {/* Social proof bullet list */}
