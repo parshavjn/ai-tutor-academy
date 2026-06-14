@@ -3,11 +3,10 @@ import { AuthScreen } from "./components/AuthScreen";
 import { MetricCard } from "./components/MetricCard";
 import { ConceptSelector } from "./components/ConceptSelector";
 import { ActiveLessonFlow } from "./components/ActiveLessonFlow";
-import { PosthogConsole } from "./components/PosthogConsole";
 import { authService, progressService, isSupabaseConfigured } from "./lib/supabase";
 import { posthogTracker } from "./lib/posthog";
 import { UserProgressData } from "./types";
-import { LogOut, BookOpen, GraduationCap, Sparkles, Terminal, Activity, HelpCircle } from "lucide-react";
+import { LogOut, GraduationCap, Sparkles } from "lucide-react";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<any | null>(null);
@@ -30,7 +29,6 @@ export default function App() {
 
   // Visual success alert state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showLogsPane, setShowLogsPane] = useState(false);
 
   // Initial session loader
   useEffect(() => {
@@ -198,10 +196,7 @@ export default function App() {
     }, 4500);
   };
 
-  // PostHog log panel triggering
-  const triggerTelemetryInspection = () => {
-    setShowLogsPane(true);
-  };
+
 
   if (isLoading) {
     return (
@@ -236,15 +231,6 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Direct Telemetry Inspector display trigger */}
-            <button
-              onClick={() => setShowLogsPane(!showLogsPane)}
-              className="px-3.5 py-1.5 hidden md:flex items-center gap-1.5 rounded-full text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50/60 dark:bg-indigo-950/20 dark:text-indigo-400 hover:bg-indigo-100/50 transition-colors cursor-pointer"
-            >
-              <Terminal className="h-3.5 w-3.5" />
-              <span>Telemetry Panel</span>
-            </button>
-
             <button
               onClick={handleLogout}
               className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-rose-500 bg-slate-50 dark:bg-slate-800/60 hover:bg-rose-50 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
@@ -279,7 +265,6 @@ export default function App() {
               showToast("Lesson ended. Your active progress remains saved.");
             }}
             onFinishLesson={handleFinishLesson}
-            posthogLogsTrigger={triggerTelemetryInspection}
           />
         ) : (
           /* Main Dashboard Explorer Home screen */
@@ -298,13 +283,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Persistent Inline real-time PostHog console stream for funnel debugging */}
-      {showLogsPane && (
-        <div className="fixed bottom-4 right-4 z-40 max-w-md w-full p-2">
-          <PosthogConsole />
-        </div>
-      )}
-
       {/* Minimal Footer */}
       <footer className="border-t border-slate-100 dark:border-slate-900 bg-white/40 dark:bg-slate-950/20 py-6 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
@@ -313,13 +291,6 @@ export default function App() {
             <span className="flex items-center gap-1 font-semibold text-indigo-500">
               <GraduationCap className="h-3.5 w-3.5" /> Socratic Methodology
             </span>
-            <span>•</span>
-            <button
-              onClick={() => setShowLogsPane(!showLogsPane)}
-              className="hover:text-indigo-500 transition-colors cursor-pointer"
-            >
-              PostHog Funnel Logs
-            </button>
           </div>
         </div>
       </footer>

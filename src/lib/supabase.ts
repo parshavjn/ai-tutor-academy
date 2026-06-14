@@ -83,7 +83,7 @@ export const authService = {
         // Send a magic link to the user's email.
         // When they click the link, Supabase will redirect them back to the app
         // and the onAuthStateChange listener will detect the session.
-        const { error } = await supabase.auth.signInWithOtp({
+        const { error } = await (supabase.auth as any).signInWithOtp({
           email,
           options: {
             shouldCreateUser: true, // Auto-create account if new user
@@ -116,7 +116,7 @@ export const authService = {
    */
   onAuthStateChange(callback: (event: string, session: any) => void): (() => void) | null {
     if (supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(callback);
+      const { data: { subscription } } = (supabase.auth as any).onAuthStateChange(callback);
       return () => subscription.unsubscribe();
     }
     return null;
@@ -124,7 +124,7 @@ export const authService = {
 
   async signOut(): Promise<void> {
     if (supabase) {
-      await supabase.auth.signOut();
+      await (supabase.auth as any).signOut();
     }
     SandboxAuth.signOut();
   },
@@ -135,7 +135,7 @@ export const authService = {
       return sandboxUser;
     }
     if (supabase) {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await (supabase.auth as any).getUser();
       return data?.user || null;
     }
     return null;

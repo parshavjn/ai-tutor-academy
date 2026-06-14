@@ -35,7 +35,6 @@ interface ActiveLessonFlowProps {
   previousMistakes?: string[];
   onFinishLesson: (xpEarned: number, updatedCompletedConcepts: boolean) => void;
   onQuit: () => void;
-  posthogLogsTrigger: () => void;
 }
 
 type Stage = "lesson" | "quiz" | "socraticCode" | "evaluation";
@@ -47,7 +46,6 @@ export function ActiveLessonFlow({
   previousMistakes = [],
   onFinishLesson,
   onQuit,
-  posthogLogsTrigger,
 }: ActiveLessonFlowProps) {
   // Lesson Data state
   const [isLoading, setIsLoading] = useState(true);
@@ -90,7 +88,6 @@ export function ActiveLessonFlow({
   useEffect(() => {
     generateConceptMaterials();
     posthogTracker.trackLessonStart(conceptName.toLowerCase().replace(/\s+/g, "-"), conceptName, difficulty);
-    posthogLogsTrigger();
   }, [conceptName]);
 
   // Handle auto-scroll on new chat bubbles
@@ -210,7 +207,6 @@ export function ActiveLessonFlow({
     setStage("quiz");
     posthogTracker.trackEvent("proceeded_to_quiz", { concept_name: conceptName });
     posthogTracker.trackEvent("quiz_started", { concept: conceptName, learnerLevel: difficulty });
-    posthogLogsTrigger();
   };
 
   // Stage 2: Adaptive Quiz Answer selected
@@ -298,7 +294,6 @@ export function ActiveLessonFlow({
       hintUsed: showHint || (quizPerformanceTable[questionKey]?.hint_used || false),
       attemptCount: attemptCount
     });
-    posthogLogsTrigger();
   };
 
   const handleNextQuiz = () => {
@@ -317,7 +312,6 @@ export function ActiveLessonFlow({
         quizQuestions.length,
         totalScorePercent
       );
-      posthogLogsTrigger();
       
       // Seed first introductory Socratic prompt
       initializeSocraticChat();
@@ -332,7 +326,6 @@ export function ActiveLessonFlow({
       concept_id: conceptName.toLowerCase().replace(/\s+/g, "-"),
       concept_name: conceptName,
     });
-    posthogLogsTrigger();
 
     // Reset quiz progress metrics completely and loop back to lesson module to study
     setHearts(3);
@@ -429,7 +422,14 @@ export function ActiveLessonFlow({
       });
 
       if (!res.ok) {
-        throw new Error("Chat service was temporarily unreachable.");
+        let errMsg = "Chat service was temporarily unreachable.";
+        try {
+          const errData = await res.json();
+          if (errData && errData.error) {
+            errMsg = errData.error;
+          }
+        } catch (e) {}
+        throw new Error(errMsg);
       }
 
       const data = await res.json();
@@ -460,7 +460,6 @@ export function ActiveLessonFlow({
         userText.length,
         tutorTurns + 1
       );
-      posthogLogsTrigger();
     } catch (err: any) {
       setChatMessages((prev) => [
         ...prev,
@@ -515,7 +514,6 @@ export function ActiveLessonFlow({
       if (data.analytics && data.analytics.event) {
         posthogTracker.trackEvent(data.analytics.event, data.analytics);
       }
-      posthogLogsTrigger();
     } catch (err: any) {
       console.error(err);
       setEvaluation({
@@ -851,7 +849,6 @@ export function ActiveLessonFlow({
                           currentQuizIndex,
                           "quiz"
                         );
-                        posthogLogsTrigger();
                       }}
                       className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 pl-1 underline cursor-pointer hover:no-underline"
                     >
