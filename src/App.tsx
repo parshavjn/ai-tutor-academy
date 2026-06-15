@@ -54,6 +54,7 @@ export default function App() {
         }
       } catch (err) {
         console.error("Session load error:", err);
+        posthogTracker.trackException(err, "App.loadSession");
       } finally {
         setIsLoading(false);
       }

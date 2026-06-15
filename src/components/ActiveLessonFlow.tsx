@@ -196,6 +196,7 @@ export function ActiveLessonFlow({
       }
     } catch (err: any) {
       console.error(err);
+      posthogTracker.trackException(err, "generateConceptMaterials");
       setErrorHeader(err.message || "An unexpected network block occurred.");
     } finally {
       setIsLoading(false);
@@ -378,6 +379,7 @@ export function ActiveLessonFlow({
       ]);
     } catch (err: any) {
       console.error(err);
+      posthogTracker.trackException(err, "initializeSocraticChat");
       setChatMessages([
         {
           id: "init_err",
@@ -461,6 +463,8 @@ export function ActiveLessonFlow({
         tutorTurns + 1
       );
     } catch (err: any) {
+      console.error(err);
+      posthogTracker.trackException(err, "handleSendMessage");
       setChatMessages((prev) => [
         ...prev,
         {
@@ -516,6 +520,7 @@ export function ActiveLessonFlow({
       }
     } catch (err: any) {
       console.error(err);
+      posthogTracker.trackException(err, "handleTriggerEvaluation");
       setEvaluation({
         verboseAnalysis: "We experienced a slight interruption rating your session. You demonstrated fantastic critical reasoning by debating directly with the AI mascot!",
         rating: "Gold Thinker",

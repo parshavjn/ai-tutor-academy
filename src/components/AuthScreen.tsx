@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Mail, Sparkles, BookOpen, KeyRound, Eye, Database, HelpCircle, ArrowLeft, ShieldCheck, ExternalLink, MailCheck } from "lucide-react";
 import { isSupabaseConfigured } from "../lib/supabase";
+import { posthogTracker } from "../lib/posthog";
 
 interface AuthScreenProps {
   onLoginSuccess: (email: string, isSandbox: boolean) => void;
@@ -39,6 +40,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       }
     } catch (err: any) {
       setErrorMsg(err.message || "An authentication error occurred.");
+      posthogTracker.trackException(err, "AuthScreen.handleSandboxBypass");
     } finally {
       setIsLoading(false);
     }
@@ -70,6 +72,7 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       }
     } catch (err: any) {
       setErrorMsg(err.message || "An authentication error occurred.");
+      posthogTracker.trackException(err, "AuthScreen.handleEmailSubmit");
     } finally {
       setIsLoading(false);
     }

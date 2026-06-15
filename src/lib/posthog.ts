@@ -155,4 +155,18 @@ export const posthogTracker = {
       evaluation_rating: finalRating,
     });
   },
+
+  trackException(error: Error | any, context: string = "") {
+    if (isPostHogConfigured) {
+      try {
+        posthog.captureException(error, { context });
+      } catch (e) {
+        console.error("Failed to capture exception in PostHog:", e);
+      }
+    }
+    this.trackEvent("exception_captured", {
+      error_message: error?.message || String(error),
+      context,
+    });
+  },
 };
