@@ -38,6 +38,8 @@ if (isPostHogConfigured) {
     api_host: posthogHost,
     autocapture: true,
     persistence: "localStorage",
+    capture_exceptions: true,
+    enable_recording_console_log: true,
   });
 }
 
