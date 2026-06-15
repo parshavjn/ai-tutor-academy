@@ -359,7 +359,14 @@ export function ActiveLessonFlow({
       });
 
       if (!res.ok) {
-        throw new Error("Tutor initial alignment failed.");
+        let errMsg = "Tutor initial alignment failed.";
+        try {
+          const errData = await res.json();
+          if (errData && errData.error) {
+            errMsg = `Tutor initial alignment failed: ${errData.error}`;
+          }
+        } catch (e) {}
+        throw new Error(errMsg);
       }
 
       const data = await res.json();
