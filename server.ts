@@ -12,7 +12,7 @@ const PORT = 3000;
 
 // Initialize Gemini Client
 const apiKey = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3-flash";
 const ai = apiKey
   ? new GoogleGenAI({
       apiKey: apiKey,
@@ -25,7 +25,7 @@ const ai = apiKey
   : null;
 
 async function generateContentWithFallback(ai: any, primaryModel: string, options: any) {
-  const models = [primaryModel, "gemini-2.5-flash", "gemini-1.5-flash"];
+  const models = [primaryModel, "gemini-3-flash", "gemini-3.1-flash-lite"];
   const uniqueModels = Array.from(new Set(models));
   let lastError = null;
   for (const model of uniqueModels) {
