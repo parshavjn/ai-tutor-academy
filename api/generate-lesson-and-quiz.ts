@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { GoogleGenAI, Type } from "@google/genai";
 
 const apiKey = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const ai = apiKey
   ? new GoogleGenAI({
       apiKey: apiKey,
@@ -77,7 +78,7 @@ You receive an AI concept name, a learner level, and optionally a list of previo
 Return ONLY valid JSON matching the schema perfectly. No prose outside the JSON.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         systemInstruction,

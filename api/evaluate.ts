@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { GoogleGenAI, Type } from "@google/genai";
 
 const apiKey = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const ai = apiKey
   ? new GoogleGenAI({
       apiKey: apiKey,
@@ -100,7 +101,7 @@ Map score to XP and badge:
 Return ONLY valid JSON. No markdown code fences. No prose outside the JSON.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         systemInstruction,

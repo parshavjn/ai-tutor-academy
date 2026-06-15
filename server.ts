@@ -12,6 +12,7 @@ const PORT = 3000;
 
 // Initialize Gemini Client
 const apiKey = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const ai = apiKey
   ? new GoogleGenAI({
       apiKey: apiKey,
@@ -77,7 +78,7 @@ You receive an AI concept name, a learner level, and optionally a list of previo
 Return ONLY valid JSON matching the schema perfectly. No prose outside the JSON.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         systemInstruction,
@@ -260,7 +261,7 @@ When student explicitly asks for a direct answer:
     contents.push({ role: "user", parts: [{ text: finalUserText }] });
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: GEMINI_MODEL,
       contents: contents,
       config: {
         systemInstruction,
@@ -350,7 +351,7 @@ Map score to XP and badge:
 Return ONLY valid JSON. No markdown code fences. No prose outside the JSON.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         systemInstruction,
