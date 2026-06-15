@@ -14,6 +14,29 @@ const ai = apiKey
     })
   : null;
 
+async function generateContentWithFallback(ai: any, primaryModel: string, options: any) {
+  const models = [primaryModel, "gemini-2.5-flash", "gemini-1.5-flash"];
+  const uniqueModels = Array.from(new Set(models));
+  let lastError = null;
+  for (const model of uniqueModels) {
+    try {
+      const response = await ai.models.generateContent({
+        ...options,
+        model: model,
+      });
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      const status = error?.status || error?.statusCode;
+      if (status === 401 || status === 403) {
+        throw error;
+      }
+      console.warn(`Model ${model} failed (Status: ${status}). Falling back to next model.`);
+    }
+  }
+  throw lastError;
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
@@ -77,8 +100,7 @@ You receive an AI concept name, a learner level, and optionally a list of previo
 ## OUTPUT FORMAT
 Return ONLY valid JSON matching the schema perfectly. No prose outside the JSON.`;
 
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
+    const response = await generateContentWithFallback(ai, GEMINI_MODEL, {
       contents: prompt,
       config: {
         systemInstruction,
