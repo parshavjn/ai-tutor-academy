@@ -142,3 +142,24 @@ export const DEFAULT_CONCEPTS: AIConcept[] = [
     prereqs: ["model_selection"]
   }
 ];
+
+export function normalizeConceptId(idOrName: string): string {
+  const clean = idOrName.trim().toLowerCase();
+  
+  // Direct matches of ID or Name
+  const directMatch = DEFAULT_CONCEPTS.find(
+    c => c.id.toLowerCase() === clean || c.name.toLowerCase() === clean
+  );
+  if (directMatch) return directMatch.id;
+
+  // Normalized fuzzy matches (replacing dashes with underscores, removing special chars)
+  const normalizedInput = clean.replace(/[^a-z0-9]/g, "");
+  const fuzzyMatch = DEFAULT_CONCEPTS.find(c => {
+    const normId = c.id.replace(/[^a-z0-9]/g, "");
+    const normName = c.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return normId === normalizedInput || normName === normalizedInput || clean.includes(normId) || normId.includes(clean);
+  });
+
+  if (fuzzyMatch) return fuzzyMatch.id;
+  return idOrName; // Fallback
+}

@@ -40,6 +40,21 @@ if (isPostHogConfigured) {
     persistence: "localStorage",
     capture_exceptions: true,
     enable_recording_console_log: true,
+    before_send: (event) => {
+      // Filter out low-value generic browser network/load failures
+      const exception = event.properties?.['$exception_message'] || event.properties?.['$exception']?.message;
+      if (exception) {
+        const message = String(exception).toLowerCase();
+        if (
+          message.includes("load failed") ||
+          message.includes("failed to fetch") ||
+          message.includes("networkerror")
+        ) {
+          return null; // Do not send generic network exceptions to PostHog
+        }
+      }
+      return event;
+    },
   });
 }
 
@@ -157,7 +172,13 @@ export const posthogTracker = {
   },
 
   trackException(error: Error | any, context: string = "") {
-    if (isPostHogConfigured) {
+    const message = error?.message || String(error);
+    const isNetworkError =
+      message.toLowerCase().includes("load failed") ||
+      message.toLowerCase().includes("failed to fetch") ||
+      message.toLowerCase().includes("networkerror");
+
+    if (isPostHogConfigured && !isNetworkError) {
       try {
         posthog.captureException(error, { context });
       } catch (e) {
@@ -165,8 +186,9 @@ export const posthogTracker = {
       }
     }
     this.trackEvent("exception_captured", {
-      error_message: error?.message || String(error),
+      error_message: message,
       context,
+      is_network_error: isNetworkError,
     });
   },
 };

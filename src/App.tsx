@@ -7,6 +7,7 @@ import { authService, progressService, isSupabaseConfigured } from "./lib/supaba
 import { posthogTracker } from "./lib/posthog";
 import { UserProgressData } from "./types";
 import { LogOut, GraduationCap, Sparkles } from "lucide-react";
+import { DEFAULT_CONCEPTS, normalizeConceptId } from "./data/concepts";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<any | null>(null);
@@ -46,6 +47,9 @@ export default function App() {
           
           // Load progress stats
           const userProgress = await progressService.getProgress(user.id);
+          if (userProgress.completedLessons) {
+            userProgress.completedLessons = Array.from(new Set(userProgress.completedLessons.map(normalizeConceptId)));
+          }
           setProgress(userProgress);
 
           // Build history list
@@ -75,6 +79,9 @@ export default function App() {
 
         // Load progress stats
         const userProgress = await progressService.getProgress(user.id);
+        if (userProgress.completedLessons) {
+          userProgress.completedLessons = Array.from(new Set(userProgress.completedLessons.map(normalizeConceptId)));
+        }
         setProgress(userProgress);
 
         // Fetch logs
@@ -103,6 +110,9 @@ export default function App() {
 
         // Fetch their metrics
         const userProgress = await progressService.getProgress(user.id);
+        if (userProgress.completedLessons) {
+          userProgress.completedLessons = Array.from(new Set(userProgress.completedLessons.map(normalizeConceptId)));
+        }
         setProgress(userProgress);
 
         // Fetch logs
@@ -157,7 +167,7 @@ export default function App() {
       newStreak = progress.streak + 1;
     }
 
-    const currentConceptId = activeConcept ? activeConcept.toLowerCase().replace(/\s+/g, "-") : "custom";
+    const currentConceptId = activeConcept ? normalizeConceptId(activeConcept) : "custom";
     const completedList = [...progress.completedLessons];
     if (!completedList.includes(currentConceptId)) {
       completedList.push(currentConceptId);
